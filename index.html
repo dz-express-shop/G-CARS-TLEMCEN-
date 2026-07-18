@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>G CARS TLEMCEN | L'Élite de l'Automobile</title>
+    <title>ATLAS MOTORS | YOUR TAGLINE HERE</title>
     
     <!-- TailWind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,7 +15,7 @@
                         obsidian: '#030305',
                         surface: '#0d0d12',
                         bordercolor: '#1a1a24',
-                        laserred: '#f43f5e',
+                        laserred: '#FA712F',
                     },
                     animation: {
                         'shimmer': 'shimmer 3s linear infinite',
@@ -131,7 +131,7 @@
             <div class="flex justify-between items-center mb-1">
                 <div class="flex items-center gap-1.5 bg-laserred/10 border border-laserred/20 px-3 py-1 rounded-full w-fit">
                     <i class="fa-solid fa-location-dot text-laserred text-[9px] animate-pulse"></i>
-                    <span id="label-showroom" class="text-[9px] font-black tracking-widest text-laserred uppercase">Tlemcen, Algérie</span>
+                    <span id="label-showroom" class="text-[9px] font-black tracking-widest text-laserred uppercase">Sétif, Algérie</span>
                 </div>
                 <button onclick="toggleAppLanguage()" id="lang-toggle-btn" class="text-[10px] font-bold border border-white/5 bg-white/5 px-3 py-1 rounded-full shadow-sm text-gray-300 hover:bg-white/10 transition active:scale-95 font-sans">
                     عربية
@@ -140,7 +140,7 @@
             
             <div class="flex justify-between items-end mt-1.5">
                 <h1 class="text-3xl font-black uppercase tracking-tighter leading-none text-glow-animated animate-shimmer" id="brand-logo">
-                    G CARS TLEMCEN
+                    ATLAS MOTORS
                 </h1>
             </div>
         </header>
@@ -434,7 +434,7 @@
 
         const translations = {
             fr: {
-                showroom: "Tlemcen, Algérie",
+                showroom: "Sétif, Algérie",
                 searchPlaceholder: "Rechercher une marque, prix...",
                 tous: "Tous", photos: "Photos",
                 detailsBtn: "Négocier sur WhatsApp",
@@ -709,7 +709,7 @@
             document.getElementById('svg-front-wing').setAttribute('fill', sbihaZone.frontWing ? '#f43f5e' : '#1a1a24');
 
             // METTRE LE NUMERO DE G CARS HNA
-            const rawMessage = `Salam G CARS TLEMCEN, rani nsaqsi 3la la ${car.marque} ${car.modele} (${car.annee}) li rakom 7atinha f le catalogue.`;
+            const rawMessage = `Salam ATLAS MOTORS, rani nsaqsi 3la la ${car.marque} ${car.modele} (${car.annee}) li rakom 7atinha f le catalogue.`;
             document.getElementById('action-whatsapp-link').href = `https://wa.me/213550000000?text=${encodeURIComponent(rawMessage)}`;
 
             const swiperContainer = document.getElementById('modal-gallery-swiper'); swiperContainer.innerHTML = '';
@@ -787,7 +787,7 @@
 
             if(!name || !year || !km) { showToastNotification(translations[currentLang].errorFields); return; }
 
-            const msg = `Salam G CARS TLEMCEN, rani n9tara7 reprise (échange) :\n\n🚗 Voiture : ${name} (${year})\n🛣️ KM : ${km}\n🎨 Peinture : ${paint || 'Aucune'}\n\n🔄 Contre : ${target}`;
+            const msg = `Salam ATLAS MOTORS, rani n9tara7 reprise (échange) :\n\n🚗 Voiture : ${name} (${year})\n🛣️ KM : ${km}\n🎨 Peinture : ${paint || 'Aucune'}\n\n🔄 Contre : ${target}`;
             window.open(`https://wa.me/213550000000?text=${encodeURIComponent(msg)}`, '_blank');
             closeRepriseModal(); showToastNotification(translations[currentLang].successToast);
         }
