@@ -481,25 +481,37 @@
             }
         };
 
+        function safeSetText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
+        }
+
+        function safeSetPlaceholder(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.placeholder = text;
+        }
+
         async function fetchCarsFromCloud() {
-            if (!supabaseClient) return;
+            if (!supabaseClient) {
+                console.error("Supabase client غير متصل!");
+                return;
+            }
             try {
                 const { data, error } = await supabaseClient
                     .from('digital_auto_cars')
-                    .select('*')
-                    .order('id', { ascending: false }); // الترتيب بالـ ID المضمون 100%
+                    .select('*');
 
-                if (!error && data) {
+                if (error) {
+                    console.error("خطأ أثناء جلب البيانات:", error);
+                } else if (data) {
                     console.log("تم جلب السيارات بنجاح:", data);
                     state.vehicles = data.map(car => ({
                         ...car,
                         sbihaZones: car.sbiha_zones || { hood: false, frontDoor: false, backDoor: false, backWing: false, frontWing: false }
-                    }));
-                } else if (error) {
-                    console.error("خطأ أثناء جلب السيارات من Supabase:", error);
+                    })).sort((a, b) => Number(b.id) - Number(a.id));
                 }
             } catch (err) {
-                console.error("خطأ في الاتصال بالسيرفر:", err);
+                console.error("خطأ اتصال بالسيرفر:", err);
             }
             renderShowroomGrid();
             renderAdminStockList();
@@ -517,28 +529,34 @@
         // ================= AUTHENTICATION =================
         function openBiometricPinOverlay() {
             if (state.isOwnerSession) {
-                document.getElementById('ownerCommandCenter').scrollIntoView({ behavior: 'smooth' });
+                const center = document.getElementById('ownerCommandCenter');
+                if(center) center.scrollIntoView({ behavior: 'smooth' });
                 return;
             }
-            document.getElementById('biometricPinOverlay').classList.remove('hidden');
-            document.getElementById('pinInput').focus();
+            const overlay = document.getElementById('biometricPinOverlay');
+            if(overlay) overlay.classList.remove('hidden');
+            const pin = document.getElementById('pinInput');
+            if(pin) pin.focus();
         }
 
         function closeBiometricPinOverlay() {
-            document.getElementById('biometricPinOverlay').classList.add('hidden');
-            document.getElementById('pinInput').value = '';
+            const overlay = document.getElementById('biometricPinOverlay');
+            if(overlay) overlay.classList.add('hidden');
+            const pin = document.getElementById('pinInput');
+            if(pin) pin.value = '';
         }
 
         function handlePinSubmission() {
             const input = document.getElementById('pinInput');
-            if (input.value === "7777") {
+            if (input && input.value === "7777") {
                 state.isOwnerSession = true;
                 closeBiometricPinOverlay();
                 evalOwnerCockpitUi();
                 triggerToastNotification("تم تفعيل نظام إدارة المالك");
-                document.getElementById('ownerCommandCenter').scrollIntoView({ behavior: 'smooth' });
+                const center = document.getElementById('ownerCommandCenter');
+                if(center) center.scrollIntoView({ behavior: 'smooth' });
                 input.value = '';
-            } else if (input.value.length === 4) {
+            } else if (input && input.value.length === 4) {
                 alert("الرمز السري غير صحيح.");
                 input.value = '';
             }
@@ -546,6 +564,7 @@
 
         function evalOwnerCockpitUi() {
             const cockpit = document.getElementById('ownerCommandCenter');
+            if (!cockpit) return;
             if (state.isOwnerSession) {
                 cockpit.classList.remove('hidden');
                 renderAdminStockList();
@@ -562,22 +581,24 @@
         }
 
         function calculateCorporateSaaSMetrics() {
-            document.getElementById('analyticsTotalCars').innerText = state.vehicles.length;
+            safeSetText('analyticsTotalCars', state.vehicles.length);
             let accumulatedValue = 0;
             state.vehicles.forEach(car => {
                 const cleanValue = parseFloat(car.prix.replace(/[^0-9.]/g, ''));
                 if (!isNaN(cleanValue)) { accumulatedValue += cleanValue; }
             });
-            document.getElementById('analyticsTotalValue').innerText = accumulatedValue.toFixed(0) + " M";
+            safeSetText('analyticsTotalValue', accumulatedValue.toFixed(0) + " M");
         }
 
         // ================= IMAGE COMPRESSION =================
         function setupHiresOnTheFlyImageCompressor() {
-            document.getElementById('imageInputLoader').addEventListener('change', function(e) {
+            const loader = document.getElementById('imageInputLoader');
+            if (!loader) return;
+            loader.addEventListener('change', function(e) {
                 const files = e.target.files;
                 state.temporaryImages64 = [];
                 if (files.length > 0) {
-                    document.getElementById('compressorLog').innerText = `جاري تجهيز 0/${files.length} صور...`;
+                    safeSetText('compressorLog', `جاري تجهيز 0/${files.length} صور...`);
                     let resolved = 0;
 
                     for (let i = 0; i < files.length; i++) {
@@ -601,7 +622,7 @@
                                 state.temporaryImages64.push(base64);
                                 resolved++;
 
-                                document.getElementById('compressorLog').innerText = `تم تجهيز ${resolved}/${files.length} صور بنجاح`;
+                                safeSetText('compressorLog', `تم تجهيز ${resolved}/${files.length} صور بنجاح`);
                             };
                             img.src = evt.target.result;
                         };
@@ -621,27 +642,29 @@
                 return;
             }
 
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> جاري الحفظ في السيرفر...`;
+            if(submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin mr-2"></i> جاري الحفظ في السيرفر...`;
+            }
 
             const freshVehicle = {
                 id: String(Date.now()),
-                marque: document.getElementById('addBrand').value.toUpperCase(),
-                modele: document.getElementById('addModel').value,
-                annee: document.getElementById('addYear').value,
-                prix: document.getElementById('addPrice').value,
-                km: document.getElementById('addKm').value,
-                moteur: document.getElementById('addEngine').value,
-                boite: document.getElementById('addTransmission').value,
-                couleur: document.getElementById('addColor').value,
-                sbiha: document.getElementById('addPaintVerdict').value,
+                marque: (document.getElementById('addBrand')?.value || '').toUpperCase(),
+                modele: document.getElementById('addModel')?.value || '',
+                annee: document.getElementById('addYear')?.value || '',
+                prix: document.getElementById('addPrice')?.value || '',
+                km: document.getElementById('addKm')?.value || '',
+                moteur: document.getElementById('addEngine')?.value || '',
+                boite: document.getElementById('addTransmission')?.value || '',
+                couleur: document.getElementById('addColor')?.value || '',
+                sbiha: document.getElementById('addPaintVerdict')?.value || '',
                 status: 'disponible',
                 sbiha_zones: {
-                    hood: document.getElementById('p_hood').checked,
-                    frontDoor: document.getElementById('p_fdoor').checked,
-                    backDoor: document.getElementById('p_bdoor').checked,
-                    backWing: document.getElementById('p_bwing').checked,
-                    frontWing: document.getElementById('p_fwing').checked
+                    hood: document.getElementById('p_hood')?.checked || false,
+                    frontDoor: document.getElementById('p_fdoor')?.checked || false,
+                    backDoor: document.getElementById('p_bdoor')?.checked || false,
+                    backWing: document.getElementById('p_bwing')?.checked || false,
+                    frontWing: document.getElementById('p_fwing')?.checked || false
                 },
                 images: state.temporaryImages64,
                 created_at: Date.now()
@@ -652,8 +675,10 @@
                     const { error } = await supabaseClient.from('digital_auto_cars').insert([freshVehicle]);
                     if (error) {
                         alert("حدث خطأ أثناء الحفظ بالسيرفر: " + error.message);
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = `<span>إضافة السيارة للمعرض الآن</span> <i class="fa-solid fa-arrow-left"></i>`;
+                        if(submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = `<span>إضافة السيارة للمعرض الآن</span> <i class="fa-solid fa-arrow-left"></i>`;
+                        }
                         return;
                     }
                 } catch(err) {
@@ -663,15 +688,21 @@
 
             await fetchCarsFromCloud();
 
-            document.getElementById('ownerCarForm').reset();
+            const form = document.getElementById('ownerCarForm');
+            if (form) form.reset();
             state.temporaryImages64 = [];
-            document.getElementById('compressorLog').innerHTML = "اضغط لرفع صور السيارة<br><span class='text-zinc-600'>(الضغط الآلي مفعل)</span>";
+            safeSetText('compressorLog', "اضغط لرفع صور السيارة");
             
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = `<span>إضافة السيارة للمعرض الآن</span> <i class="fa-solid fa-arrow-left"></i>`;
+            if(submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>إضافة السيارة للمعرض الآن</span> <i class="fa-solid fa-arrow-left"></i>`;
+            }
 
             triggerToastNotification(lexicons[state.lang].addedSuccess);
-            setTimeout(() => { document.getElementById('cars-grid-feed').scrollIntoView({ behavior: 'smooth' }); }, 500);
+            setTimeout(() => { 
+                const grid = document.getElementById('cars-grid-feed');
+                if (grid) grid.scrollIntoView({ behavior: 'smooth' }); 
+            }, 500);
         }
 
         async function removeInventoryItem(id) {
@@ -703,32 +734,32 @@
         }
 
         function applyLanguage() {
-            document.getElementById('lang-btn').innerText = state.lang === 'fr' ? 'عربية' : 'FR';
+            safeSetText('lang-btn', state.lang === 'fr' ? 'عربية' : 'FR');
             document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
 
-            document.getElementById('label-showroom').innerText = lexicons[state.lang].showroom;
-            document.getElementById('search-input').placeholder = lexicons[state.lang].searchPlaceholder;
-            document.getElementById('nav-discover').innerText = lexicons[state.lang].discover;
-            document.getElementById('nav-reprise').innerText = lexicons[state.lang].reprise;
-            document.getElementById('nav-contact').innerText = lexicons[state.lang].contact;
+            safeSetText('label-showroom', lexicons[state.lang].showroom);
+            safeSetPlaceholder('search-input', lexicons[state.lang].searchPlaceholder);
+            safeSetText('nav-discover', lexicons[state.lang].discover);
+            safeSetText('nav-reprise', lexicons[state.lang].reprise);
+            safeSetText('nav-contact', lexicons[state.lang].contact);
 
-            document.getElementById('label-price-requested').innerText = lexicons[state.lang].price;
-            document.getElementById('tab-specs').innerText = lexicons[state.lang].specsTab;
-            document.getElementById('tab-paint').innerText = lexicons[state.lang].paintTab;
-            document.getElementById('label-paint-scan-title').innerText = lexicons[state.lang].paintScan;
-            document.getElementById('label-contact-seller').innerText = lexicons[state.lang].contactSeller;
+            safeSetText('label-price-requested', lexicons[state.lang].price);
+            safeSetText('tab-specs', lexicons[state.lang].specsTab);
+            safeSetText('tab-paint', lexicons[state.lang].paintTab);
+            safeSetText('label-paint-scan-title', lexicons[state.lang].paintScan);
+            safeSetText('label-contact-seller', lexicons[state.lang].contactSeller);
             
-            document.getElementById('label-km').innerText = lexicons[state.lang].km;
-            document.getElementById('label-box').innerText = lexicons[state.lang].box;
-            document.getElementById('label-engine').innerText = lexicons[state.lang].engine;
-            document.getElementById('label-color').innerText = lexicons[state.lang].color;
+            safeSetText('label-km', lexicons[state.lang].km);
+            safeSetText('label-box', lexicons[state.lang].box);
+            safeSetText('label-engine', lexicons[state.lang].engine);
+            safeSetText('label-color', lexicons[state.lang].color);
 
-            document.getElementById('label-reprise-title').innerText = lexicons[state.lang].repriseTitle;
-            document.getElementById('label-reprise-desc').innerText = lexicons[state.lang].repriseDesc;
-            document.getElementById('label-your-car').innerText = lexicons[state.lang].yourCar;
-            document.getElementById('btn-submit-proposal').innerText = lexicons[state.lang].sendProposal;
+            safeSetText('label-reprise-title', lexicons[state.lang].repriseTitle);
+            safeSetText('label-reprise-desc', lexicons[state.lang].repriseDesc);
+            safeSetText('label-your-car', lexicons[state.lang].yourCar);
+            safeSetText('btn-submit-proposal', lexicons[state.lang].sendProposal);
             
-            document.getElementById('lbl-total-bikes').innerText = lexicons[state.lang].totalBikes;
+            safeSetText('lbl-total-bikes', lexicons[state.lang].totalBikes);
 
             renderBrandFilterTrack();
             renderShowroomGrid();
@@ -736,6 +767,7 @@
 
         function renderBrandFilterTrack() {
             const track = document.getElementById('brand-scroller-track');
+            if (!track) return;
             track.innerHTML = '';
             const list = ['Tous', ...new Set(state.vehicles.map(v => v.marque))];
 
@@ -787,7 +819,10 @@
 
         function renderShowroomGrid() {
             const mainStream = document.getElementById('cars-grid-feed');
-            const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+            if (!mainStream) return;
+
+            const searchInput = document.getElementById('search-input');
+            const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
             Object.keys(liveFeedCarousels).forEach(key => clearInterval(liveFeedCarousels[key]));
             mainStream.innerHTML = '';
@@ -856,59 +891,85 @@
             const car = state.vehicles.find(v => v.id === String(id));
             if (!car) return;
 
-            document.getElementById('modal-year-badge').innerText = car.annee;
-            document.getElementById('modal-title').innerText = `${car.marque} ${car.modele}`;
-            document.getElementById('modal-price').innerText = car.prix;
-            document.getElementById('spec-km').innerText = car.km;
-            document.getElementById('spec-engine').innerText = car.moteur;
-            document.getElementById('spec-box').innerText = car.boite || 'AUTOMATIQUE';
-            document.getElementById('spec-color').innerText = car.couleur;
-            document.getElementById('paint-verdict').innerText = car.sbiha;
+            safeSetText('modal-year-badge', car.annee);
+            safeSetText('modal-title', `${car.marque} ${car.modele}`);
+            safeSetText('modal-price', car.prix);
+            safeSetText('spec-km', car.km);
+            safeSetText('spec-engine', car.moteur);
+            safeSetText('spec-box', car.boite || 'AUTOMATIQUE');
+            safeSetText('spec-color', car.couleur);
+            safeSetText('paint-verdict', car.sbiha);
 
             const mappedZones = car.sbihaZones || { hood: false, frontDoor: false, backDoor: false, backWing: false, frontWing: false };
-            document.getElementById('svg-hood').setAttribute('fill', mappedZones.hood ? '#FF5500' : '#15151f');
-            document.getElementById('svg-front-door').setAttribute('fill', mappedZones.frontDoor ? '#FF5500' : '#15151f');
-            document.getElementById('svg-back-door').setAttribute('fill', mappedZones.backDoor ? '#FF5500' : '#15151f');
-            document.getElementById('svg-back-wing').setAttribute('fill', mappedZones.backWing ? '#FF5500' : '#15151f');
-            document.getElementById('svg-front-wing').setAttribute('fill', mappedZones.frontWing ? '#FF5500' : '#15151f');
+            
+            const hood = document.getElementById('svg-hood');
+            if(hood) hood.setAttribute('fill', mappedZones.hood ? '#FF5500' : '#15151f');
+            
+            const fdoor = document.getElementById('svg-front-door');
+            if(fdoor) fdoor.setAttribute('fill', mappedZones.frontDoor ? '#FF5500' : '#15151f');
+
+            const bdoor = document.getElementById('svg-back-door');
+            if(bdoor) bdoor.setAttribute('fill', mappedZones.backDoor ? '#FF5500' : '#15151f');
+
+            const bwing = document.getElementById('svg-back-wing');
+            if(bwing) bwing.setAttribute('fill', mappedZones.backWing ? '#FF5500' : '#15151f');
+
+            const fwing = document.getElementById('svg-front-wing');
+            if(fwing) fwing.setAttribute('fill', mappedZones.frontWing ? '#FF5500' : '#15151f');
 
             const targetNegotiatePitch = state.lang === 'fr' 
                 ? `Salam DIGITAL AUTO, je souhaite obtenir des informations concernant la voiture ${car.marque} ${car.modele} (${car.annee}) affichée à ${car.prix}.`
                 : `السلام عليكم DIGITAL AUTO، راني مهتم بسيارة ${car.marque} ${car.modele} (${car.annee}) المعروضة بسعر ${car.prix}.`;
-            document.getElementById('modal-whatsapp-btn').href = `https://wa.me/${SHOWROOM_CONFIG.whatsappNumber}?text=${encodeURIComponent(targetNegotiatePitch)}`;
+            
+            const btnWa = document.getElementById('modal-whatsapp-btn');
+            if (btnWa) btnWa.href = `https://wa.me/${SHOWROOM_CONFIG.whatsappNumber}?text=${encodeURIComponent(targetNegotiatePitch)}`;
 
             const galleryTrack = document.getElementById('modal-image-swiper');
-            galleryTrack.innerHTML = '';
-            car.images.forEach(img => {
-                galleryTrack.innerHTML += `<div class="swipe-slide h-full w-full snap-center shrink-0 flex items-center justify-center bg-black"><img src="${img}" class="w-full h-full object-cover"></div>`;
-            });
+            if (galleryTrack) {
+                galleryTrack.innerHTML = '';
+                car.images.forEach(img => {
+                    galleryTrack.innerHTML += `<div class="swipe-slide h-full w-full snap-center shrink-0 flex items-center justify-center bg-black"><img src="${img}" class="w-full h-full object-cover"></div>`;
+                });
+                galleryTrack.scrollLeft = 0;
+            }
 
-            document.getElementById('gallery-indicator-counter').innerText = `1 / ${car.images.length}`;
-            galleryTrack.scrollLeft = 0;
+            safeSetText('gallery-indicator-counter', `1 / ${car.images.length}`);
             switchDetailsTabPane('specs');
 
-            document.getElementById('detailSheetModal').classList.remove('hidden');
-            setTimeout(() => { document.getElementById('detailSheetContainer').classList.add('active'); }, 10);
+            const modal = document.getElementById('detailSheetModal');
+            if (modal) modal.classList.remove('hidden');
+            setTimeout(() => { 
+                const container = document.getElementById('detailSheetContainer');
+                if (container) container.classList.add('active'); 
+            }, 10);
         }
 
         function closeDetailSheet() {
-            document.getElementById('detailSheetModal').classList.add('hidden');
+            const modal = document.getElementById('detailSheetModal');
+            if (modal) modal.classList.add('hidden');
         }
 
         function syncSwiperImageCounter() {
             const swiper = document.getElementById('modal-image-swiper');
+            if (!swiper) return;
             const calculatedIndex = Math.round(swiper.scrollLeft / swiper.offsetWidth) + 1;
             const size = swiper.children.length;
-            document.getElementById('gallery-indicator-counter').innerText = `${calculatedIndex} / ${size}`;
+            safeSetText('gallery-indicator-counter', `${calculatedIndex} / ${size}`);
         }
 
         function switchDetailsTabPane(tab) {
             document.querySelectorAll('.tab-btn').forEach(button => button.className = "tab-btn flex-1 py-4 border-b-2 border-transparent text-zinc-500 transition");
-            document.getElementById(`tab-${tab}`).className = "tab-btn flex-1 py-4 border-b-2 border-laserorange text-laserorange transition font-black";
+            
+            const selectedTab = document.getElementById(`tab-${tab}`);
+            if (selectedTab) selectedTab.className = "tab-btn flex-1 py-4 border-b-2 border-laserorange text-laserorange transition font-black";
 
-            document.getElementById('pane-specs').classList.add('hidden');
-            document.getElementById('pane-paint').classList.add('hidden');
-            document.getElementById(`pane-${tab}`).classList.remove('hidden');
+            const specs = document.getElementById('pane-specs');
+            const paint = document.getElementById('pane-paint');
+            if (specs) specs.classList.add('hidden');
+            if (paint) paint.classList.add('hidden');
+
+            const currentPane = document.getElementById(`pane-${tab}`);
+            if (currentPane) currentPane.classList.remove('hidden');
         }
 
         function buildRepriseTargetDropdown() {
@@ -921,19 +982,21 @@
         }
 
         function openRepriseModal() {
-            document.getElementById('repriseSheetModal').classList.remove('hidden');
+            const modal = document.getElementById('repriseSheetModal');
+            if (modal) modal.classList.remove('hidden');
         }
 
         function closeRepriseModal() {
-            document.getElementById('repriseSheetModal').classList.add('hidden');
+            const modal = document.getElementById('repriseSheetModal');
+            if (modal) modal.classList.add('hidden');
         }
 
         function sendReprisePayload() {
-            const name = document.getElementById('rep-car-name').value;
-            const year = document.getElementById('rep-car-year').value;
-            const km = document.getElementById('rep-car-km').value;
-            const paint = document.getElementById('rep-car-paint').value;
-            const target = document.getElementById('rep-car-target').value;
+            const name = document.getElementById('rep-car-name')?.value || '';
+            const year = document.getElementById('rep-car-year')?.value || '';
+            const km = document.getElementById('rep-car-km')?.value || '';
+            const paint = document.getElementById('rep-car-paint')?.value || '';
+            const target = document.getElementById('rep-car-target')?.value || '';
 
             if (!name || !year) { alert(lexicons[state.lang].errorFields); return; }
 
@@ -984,7 +1047,8 @@
 
         function triggerToastNotification(text) {
             const toast = document.getElementById('toastAlert');
-            document.getElementById('toast-txt').innerText = text;
+            if (!toast) return;
+            safeSetText('toast-txt', text);
             toast.className = "fixed top-6 left-1/2 -translate-x-1/2 z-[100] transform translate-y-0 opacity-100 transition-all duration-500";
             setTimeout(() => { toast.className = "fixed top-6 left-1/2 -translate-x-1/2 z-[100] transform -translate-y-24 opacity-0 transition-all duration-500"; }, 3000);
         }
