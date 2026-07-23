@@ -487,18 +487,19 @@
                 const { data, error } = await supabaseClient
                     .from('digital_auto_cars')
                     .select('*')
-                    .order('created_at', { ascending: false });
+                    .order('id', { ascending: false }); // الترتيب بالـ ID المضمون 100%
 
                 if (!error && data) {
+                    console.log("تم جلب السيارات بنجاح:", data);
                     state.vehicles = data.map(car => ({
                         ...car,
                         sbihaZones: car.sbiha_zones || { hood: false, frontDoor: false, backDoor: false, backWing: false, frontWing: false }
                     }));
                 } else if (error) {
-                    console.error("Supabase load error:", error);
+                    console.error("خطأ أثناء جلب السيارات من Supabase:", error);
                 }
             } catch (err) {
-                console.error("Cloud Connection Error:", err);
+                console.error("خطأ في الاتصال بالسيرفر:", err);
             }
             renderShowroomGrid();
             renderAdminStockList();
